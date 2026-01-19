@@ -70,10 +70,32 @@ The application doesn't require server-side environment variables - users enter 
 
 2. Run the Flask app:
    ```bash
+   # With debug mode (shows full error traces)
+   DEBUG=True python api/index.py
+
+   # Or using flask command
    python -m flask --app api/index run
    ```
 
 3. Open your browser to `http://localhost:5000`
+
+### Debugging
+
+The app has a `DEBUG` flag (enabled by default) that controls error visibility:
+
+- **DEBUG=True** (default): Full error traces are displayed, exceptions are re-raised for easier debugging
+- **DEBUG=False**: Errors are caught and returned as JSON with minimal information
+
+To disable debug mode:
+```bash
+DEBUG=False python api/index.py
+```
+
+Or set as environment variable in Vercel:
+```bash
+vercel env add DEBUG
+# Enter value: False
+```
 
 ## How to Use
 
