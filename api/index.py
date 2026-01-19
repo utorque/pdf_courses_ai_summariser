@@ -1,45 +1,44 @@
 from flask import Flask, render_template, request, jsonify
 import io
 import base64
+import os
+import traceback
 import PyPDF2
 import anthropic
 
 app = Flask(__name__, template_folder='../templates')
+
+# Debug mode - set to True to see full error traces
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 # Store summaries in memory (session-based storage would be better for production)
 summaries_store = {}
 
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     """Extract text from PDF bytes without writing to disk."""
-    try:
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text() + "\n"
-        return text
-    except Exception as e:
-        raise Exception(f"Error extracting PDF text: {str(e)}")
+    pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text() + "\n"
+    return text
 
 def call_anthropic_api(system_prompt: str, user_message: str, api_key: str, api_base: str, model: str) -> str:
     """Call Anthropic API for summarization."""
-    try:
-        client = anthropic.Anthropic(
-            api_key=api_key,
-            base_url=api_base if api_base else None
-        )
+    client = anthropic.Anthropic(
+        api_key=api_key,
+        base_url=api_base if api_base else None
+    )
 
-        message = client.messages.create(
-            model=model,
-            max_tokens=16000,
-            system=system_prompt,
-            messages=[
-                {"role": "user", "content": user_message}
-            ]
-        )
+    message = client.messages.create(
+        model=model,
+        max_tokens=16000,
+        system=system_prompt,
+        messages=[
+            {"role": "user", "content": user_message}
+        ]
+    )
 
-        return message.content[0].text
-    except Exception as e:
-        raise Exception(f"Error calling API: {str(e)}")
+    return message.content[0].text
 
 def get_individual_summary_prompt() -> str:
     """Get the prompt for individual PDF summarization."""
@@ -194,7 +193,13 @@ def summarize_pdf():
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        if DEBUG:
+            # Re-raise to see full traceback in debug mode
+            raise
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc() if DEBUG else None
+        }), 500
 
 @app.route('/api/generate-final-pdf', methods=['POST'])
 def generate_final_pdf():
@@ -276,7 +281,13 @@ def generate_final_pdf():
             })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        if DEBUG:
+            # Re-raise to see full traceback in debug mode
+            raise
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc() if DEBUG else None
+        }), 500
 
 @app.route('/api/download-summaries', methods=['POST'])
 def download_summaries():
@@ -305,7 +316,13 @@ def download_summaries():
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        if DEBUG:
+            # Re-raise to see full traceback in debug mode
+            raise
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc() if DEBUG else None
+        }), 500
 
 @app.route('/api/clear-summaries', methods=['POST'])
 def clear_summaries():
@@ -320,7 +337,22 @@ def clear_summaries():
         return jsonify({'success': True})
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        if DEBUG:
+            # Re-raise to see full traceback in debug mode
+            raise
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc() if DEBUG else None
+        }), 500
+
+# Enable Flask debug mode if DEBUG is True
+if DEBUG:
+    app.config['DEBUG'] = True
+    app.config['PROPAGATE_EXCEPTIONS'] = True
 
 # Vercel serverless function handler
-app = app
+handler = app
+
+# For local development
+if __name__ == '__main__':
+    app.run(debug=DEBUG, host='0.0.0.0', port=5000)
