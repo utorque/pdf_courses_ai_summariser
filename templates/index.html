@@ -404,9 +404,15 @@
         <!-- Download Options -->
         <div class="section">
             <div class="section-title">💾 Download Options</div>
+            <div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #ffc107;">
+                <strong>💡 Tip:</strong> If summaries are too long and causing context issues, click "Condense Summaries" below to make them more token-efficient before generating final PDFs.
+            </div>
             <div class="button-group">
                 <button class="btn btn-secondary" id="downloadSummariesBtn">
                     Download All Summaries (Markdown)
+                </button>
+                <button class="btn btn-secondary" id="condenseSummariesBtn" style="background: #17a2b8;">
+                    🔄 Condense Summaries (Reduce Token Count)
                 </button>
                 <button class="btn btn-success" id="generateMemorizeBtn">
                     Generate & Download Memorize PDF
@@ -614,6 +620,56 @@
                 }
             } catch (error) {
                 showAlert(`Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Condense summaries
+        document.getElementById('condenseSummariesBtn').addEventListener('click', async () => {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const apiBase = document.getElementById('apiBase').value.trim();
+            const model = document.getElementById('model').value.trim();
+
+            if (!apiKey) {
+                showAlert('Please enter your API key', 'error');
+                return;
+            }
+
+            if (uploadedFiles.filter(f => f.status === 'completed').length === 0) {
+                showAlert('No summaries to condense. Generate summaries first.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('condenseSummariesBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner"></span> Condensing...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/condense-summaries', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        api_key: apiKey,
+                        api_base: apiBase,
+                        model: model
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert(`✅ ${data.message} - Summaries are now more token-efficient!`, 'success');
+                } else {
+                    showAlert(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         });
 
