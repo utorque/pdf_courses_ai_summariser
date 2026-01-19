@@ -24,10 +24,25 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
 
 def call_anthropic_api(system_prompt: str, user_message: str, api_key: str, api_base: str, model: str) -> str:
     """Call Anthropic API for summarization."""
-    client = anthropic.Anthropic(
-        api_key=api_key,
-        base_url=api_base if api_base else None
+    import httpx
+
+    # Build client kwargs
+    client_kwargs = {'api_key': api_key}
+
+    # Only set base_url if it's provided and not the default Anthropic URL
+    if api_base and api_base.strip() and api_base != 'https://api.anthropic.com':
+        client_kwargs['base_url'] = api_base
+
+    # Create httpx client with explicit configuration
+    # Set trust_env=False to prevent environment proxy variables from interfering
+    http_client = httpx.Client(
+        timeout=300.0,  # 5 minute timeout for large PDFs
+        follow_redirects=True,
+        trust_env=False  # Don't use environment variables for proxies
     )
+    client_kwargs['http_client'] = http_client
+
+    client = anthropic.Anthropic(**client_kwargs)
 
     message = client.messages.create(
         model=model,
