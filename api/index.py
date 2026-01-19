@@ -503,9 +503,6 @@ if DEBUG:
     app.config['DEBUG'] = True
     app.config['PROPAGATE_EXCEPTIONS'] = True
 
-# Vercel serverless function handler
-handler = app
-
 # For local development
 if __name__ == '__main__':
     app.run(debug=DEBUG, host='0.0.0.0', port=5000)
